@@ -1,14 +1,35 @@
 [tool.poetry]
 name = "api-bloxs"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+description = "Api Bloxs"
+authors = ["Keven Lucas <k_l.s@outlook.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
+pre-commit = "3.6.0"
+black = "23.12.0"
+isort = "5.13.2"
 
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+
+[tool.black]
+line-length = 88
+include = '\.pyi?$'
+exclude = '''
+/(
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
