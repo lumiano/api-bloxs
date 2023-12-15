@@ -1,0 +1,41 @@
+version: '3.1'
+
+services:
+    database-bloxs:
+        image: mysql:5.7
+        container_name: database-bloxs
+        restart: always
+        env_file: .env
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        ports:
+            - 3306:3306
+        volumes:
+            - mysql-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+            interval: 1m30s
+            timeout: 10s
+            retries: 3
+        networks:
+            - bloxs-network
+    
+    bloxs-adminer:
+        image: adminer
+        container_name: bloxs-adminer
+        restart: always
+        ports:
+            - 8080:8080
+        networks:
+            - bloxs-network
+
+volumes:
+    mysql-data:
+
+networks:
+    bloxs-network:
+        name: bloxs-network
+        driver: bridge
