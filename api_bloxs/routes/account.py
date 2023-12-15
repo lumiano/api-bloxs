@@ -1,8 +1,8 @@
 from apiflask import APIBlueprint
 from dependency_injector.wiring import Provide, inject
 
-from api_bloxs.modules.account.models.account import Account
-from api_bloxs.modules.account.services.account import AccountService
+from api_bloxs.modules.account.model.account import Account
+from api_bloxs.modules.account.service.account import AccountService
 from api_bloxs.shared.containers import Container
 
 AccountBlueprint = APIBlueprint("account", __name__)

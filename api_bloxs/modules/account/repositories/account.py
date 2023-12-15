@@ -3,7 +3,7 @@ from typing import Callable
 
 from requests import Session
 
-from api_bloxs.modules.account.models.account import Account
+from api_bloxs.modules.account.model.account import Account
 
 
 class BaseRepository:
