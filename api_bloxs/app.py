@@ -1,12 +1,21 @@
+"""Aplication Module."""
+
 from apiflask import APIFlask
 
-app = APIFlask(__name__)
+from api_bloxs.routes.account import AccountBlueprint
+from api_bloxs.shared.containers import Container
 
 
-@app.get("/")
-def hello():
-    return {"message": "Hello, World!"}
+def create_app() -> APIFlask:
+    container = Container()
 
+    app = APIFlask(
+        __name__,
+        docs_path="/openapi/docs",
+    )
 
-if __name__ == "__main__":
-    app.run(debug=True)
+    app.container = container
+
+    app.register_blueprint(AccountBlueprint)
+
+    return app

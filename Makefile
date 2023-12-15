@@ -1,6 +1,3 @@
-
-#!/bin/bash
-
 .PHONY: setup dev clean
 
 FLASK_APP := app.py

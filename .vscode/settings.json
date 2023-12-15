@@ -1,3 +1,7 @@
 {
-    "editor.formatOnSave": true
+    "editor.formatOnSave": true,
+    "explorer.compactFolders": false,
+    "files.exclude": {
+        "**/__pycache__": true
+    }
 }
