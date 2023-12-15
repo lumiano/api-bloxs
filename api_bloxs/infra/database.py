@@ -26,8 +26,8 @@ class Database:
         Base.metadata.create_all(self._engine)
 
     @contextmanager
-    def session(self) -> Callable[..., AbstractContextManager[Session]]:
-        session: Session = self._session_factory()
+    def session(self) -> AbstractContextManager[Session]:
+        session = self._session()
         try:
             yield session
         except Exception:
