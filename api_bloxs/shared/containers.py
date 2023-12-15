@@ -4,7 +4,7 @@ from dependency_injector import containers, providers
 
 from api_bloxs.infra.database import Database
 from api_bloxs.modules.account.repositories.account import AccountRepository
-from api_bloxs.modules.account.services.account import AccountService
+from api_bloxs.modules.account.service.account import AccountService
 from api_bloxs.shared.environment import Environment
 
 
