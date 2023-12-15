@@ -1,18 +1,45 @@
-.PHONY: setup dev clean
+.PHONY: install start@dev clean
 
 FLASK_APP := app.py
 PACKAGE_NAME := api_bloxs
+APP := $(PACKAGE_NAME)/$(FLASK_APP)
+POETRY_RUN_FLASK = poetry run flask --app $(APP)
 
-setup:
+
+define run_database_command
+	$(POETRY_RUN_FLASK) db $(1) $(2)
+endef
+
+
+install:
 	@echo "Installing dependencies with Poetry..."
 	poetry install
 
-dev:
+start@dev:
 	@echo "Running the Python script..."
-	poetry run flask --app $(PACKAGE_NAME)/$(FLASK_APP) run --reload
+	poetry run flask --app $(APP) run --reload
 
 clean:
 	@echo "Cleaning up..."
 	poetry env remove $(shell poetry env info --path)
 	rm -rf __pycache__
 	rm -f *.pyc
+
+
+db@init:
+	@echo "Initializing the database..."
+	$(call run_database_command,init)
+
+db@migrate:
+	@echo "Migrating the database..."
+	$(call run_database_command,migrate,-m $(m))
+
+db@upgrade:
+	@echo "Upgrading the database..."
+	$(call run_database_command,upgrade)
+
+db@downgrade:
+	@echo "Downgrading the database..."
+	$(call run_database_command,downgrade)
+
+	
