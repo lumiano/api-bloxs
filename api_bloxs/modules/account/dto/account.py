@@ -1,4 +1,5 @@
 from apiflask import Schema, fields
+
 from apiflask.validators import Range
 
 from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
