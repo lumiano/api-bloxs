@@ -1,59 +1,37 @@
+from abc import ABC, abstractmethod
 from contextlib import AbstractContextManager
-from typing import Callable
+from typing import Callable, List
 
-from requests import Session
+from sqlalchemy import and_
 
+
+from api_bloxs.base.repository import BaseRepository
 from api_bloxs.modules.account.model.account import Account
-
-
-class BaseRepository:
-    def __init__(self, session, model):
-        self.session = session
-        self.model = model
-
-    def get_all(self):
-        return self.session.query(self.model).all()
-
-    def get_by_id(self, id):
-        return self.session.query(self.model).filter_by(id=id).first()
-
-    def create(self, obj):
-        self.session.add(obj)
-        self.session.commit()
-        return obj
-
-    def update(self, obj):
-        self.session.commit()
-        return obj
-
-    def delete(self, obj):
-        self.session.delete(obj)
-        self.session.commit()
-        return obj
+from sqlalchemy.orm import Session
 
 
 class AccountRepository(BaseRepository):
-    def __init__(
-        self, session_factory: Callable[..., AbstractContextManager[Session]]
-    ) -> None:
-        super().__init__(session_factory, Account)
+    """Account repository"""
+
+    def __init__(self, session: Callable[..., AbstractContextManager[Session]]) -> None:
+        super().__init__(session=session, model=Account)
 
     def get_by_id(self, id) -> Account:
+        """Get account by id"""
         with self.session() as session:
             account = session.query(Account).filter_by(id=id).first()
-
-            if not account:
-                raise AccountNotFoundError(id)
-
             return account
 
+    def create(self, obj: Account) -> Account:
+        """Create account"""
+        with self.session() as session:
+            session.add(obj)
+            session.commit()
+            return obj
 
-class NotFoundError(Exception):
-    entity_name: str
+    def find_by_params(self, params) -> Account:
+        """Find account by params"""
 
-    def __init__(self, entity_id):
-        super().__init__(f"{self.entity_name} not found, id: {entity_id}")
-
-
-class AccountNotFoundError(NotFoundError):
-    entity_name = "Account"
+        with self.session() as session:
+            account = session.query(Account).filter_by(**params).first()
+            return account

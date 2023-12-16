@@ -1,8 +1,6 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer, func
-
-
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.event import listens_for
+from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
