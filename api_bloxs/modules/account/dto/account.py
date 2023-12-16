@@ -1,13 +1,21 @@
-from apiflask import Schema
-from apiflask.fields import Integer, String
+from apiflask import Schema, fields
+
+from apiflask.validators import Range
+
+from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
 
 
 class AccountDto(Schema):
-    id = Integer()
-    id_conta = Integer()
-    id_pessoa = Integer()
-    saldo = Integer()
-    limite_saque_diario = Integer()
-    flag_ativo = Integer()
-    tipo_conta = Integer()
-    data_criacao = String()
+    """Account DTO."""
+
+    account_id = fields.Integer()
+    person_id = fields.Integer(required=True, validate=Range(min=1))
+    balance = fields.Decimal(
+        required=True, validate=Range(min=0), allow_nan=False, as_string=True
+    )
+    id = fields.Integer(required=False, validate=Range(min=1))
+    daily_withdrawal_limit = fields.Decimal(required=True, validate=Range(min=0))
+    is_active = fields.Boolean(required=True)
+    account_type = fields.Enum(AccountTypeEnum, required=True)
+    creation_date = fields.DateTime(format="%Y-%m-%dT%H:%M:%S", required=False)
+    update_date = fields.DateTime(format="%Y-%m-%dT%H:%M:%S", required=False)
