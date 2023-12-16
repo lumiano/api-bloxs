@@ -4,10 +4,11 @@ from typing import Callable, List
 
 from sqlalchemy import and_
 
+from sqlalchemy.orm import Session
 
 from api_bloxs.base.repository import BaseRepository
 from api_bloxs.modules.account.model.account import Account
-from sqlalchemy.orm import Session
+
 
 
 class AccountRepository(BaseRepository):

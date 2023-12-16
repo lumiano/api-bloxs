@@ -1,29 +1,28 @@
-import logging
 from contextlib import AbstractContextManager, contextmanager
-from typing import Callable
+from typing import Any
 
 from sqlalchemy import create_engine, orm
-from sqlalchemy.ext.declarative import declarative_base
+
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
 
-Base = declarative_base()
+from api_bloxs.base.model import Base
 
 
-class Database:
+class MySQLDatabase:
     def __init__(self, db_url: str) -> None:
-        self._engine = create_engine(db_url, echo=True)
-        self._session_factory = orm.scoped_session(
+        self.engine = create_engine(db_url)
+
+        self._session = orm.scoped_session(
             orm.sessionmaker(
                 autocommit=False,
                 autoflush=False,
-                bind=self._engine,
+                bind=self.engine,
             ),
         )
 
-    def create_database(self) -> None:
-        Base.metadata.create_all(self._engine)
+    def create_database(self) -> Any:
+        Base.metadata.create_all(self.engine)
 
     @contextmanager
     def session(self) -> AbstractContextManager[Session]:
@@ -31,7 +30,6 @@ class Database:
         try:
             yield session
         except Exception:
-            logger.exception("Session rollback because of exception")
             session.rollback()
             raise
         finally:
