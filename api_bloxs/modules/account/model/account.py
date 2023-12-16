@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric
 
 from api_bloxs.infra.database import Base
