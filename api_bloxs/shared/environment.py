@@ -6,12 +6,16 @@ from environs import Env
 
 
 @dataclass
-class AppConfig:
-    DATABASE_URL: str
+class EnvironmentVariables:
+    DATABASE_DSN: str
     FLASK_PORT: str
     FLASK_DEBUG: str
     FLASK_APP: str
+    FLASK_ENV: str
     PACKAGE_NAME: str
+    SQLALCHEMY_DATABASE_URI: str
+    SQLALCHEMY_TRACK_MODIFICATIONS: bool
+    SQLALCHEMY_ECHO: bool
 
 
 class Environment:
@@ -19,21 +23,28 @@ class Environment:
 
     def __init__(self, dotenv_path: Optional[str] = ".env"):
         load_dotenv(dotenv_path)
-        self.env = Env()
+        self._env = Env()
 
-        self.app_config = AppConfig(
-            DATABASE_URL=self.env.str("DATABASE_URL"),
-            FLASK_PORT=self.env.str("FLASK_PORT"),
-            FLASK_DEBUG=self.env.str("FLASK_DEBUG"),
-            FLASK_APP=self.env.str("FLASK_APP"),
-            PACKAGE_NAME=self.env.str("PACKAGE_NAME"),
-        )
-
-    def get(self, key: str) -> Optional[str]:
+    def get(self, key: str) -> str:
         """Get environment variable"""
-        value = getattr(self.app_config, key, None)
 
-        if value is None:
-            raise Exception(f"Environment variable {key} not found.")
+        value = self._env.str(key)
+
+        if not value:
+            raise ValueError(f"Environment variable {key} not found")
 
         return value
+
+    def load(self) -> EnvironmentVariables:
+        """Load environment variables from dict"""
+        return EnvironmentVariables(
+            DATABASE_DSN=self.get("DATABASE_DSN"),
+            FLASK_PORT=self.get("FLASK_PORT"),
+            FLASK_DEBUG=self.get("FLASK_DEBUG"),
+            FLASK_ENV=self.get("FLASK_ENV"),
+            FLASK_APP=self.get("FLASK_APP"),
+            PACKAGE_NAME=self.get("PACKAGE_NAME"),
+            SQLALCHEMY_DATABASE_URI=self.get("SQLALCHEMY_DATABASE_URI"),
+            SQLALCHEMY_TRACK_MODIFICATIONS=self.get("SQLALCHEMY_TRACK_MODIFICATIONS"),
+            SQLALCHEMY_ECHO=self.get("SQLALCHEMY_ECHO"),
+        )
