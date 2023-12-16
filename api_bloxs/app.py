@@ -1,11 +1,10 @@
-from typing import List, Dict
+from typing import Dict, List
 
 from apiflask import APIBlueprint, APIFlask
 
-from api_bloxs.shared.application import ApplicationContainer
-
 from api_bloxs.routes.account import account_blueprint
 from api_bloxs.routes.person import person_blueprint
+from api_bloxs.shared.application import ApplicationContainer
 
 
 class AppConfigurator:

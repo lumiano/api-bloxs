@@ -2,9 +2,7 @@ from contextlib import AbstractContextManager, contextmanager
 from typing import Any
 
 from sqlalchemy import create_engine, orm
-
 from sqlalchemy.orm import Session
-
 
 from api_bloxs.base.model import Base
 

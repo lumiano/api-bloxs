@@ -1,21 +1,56 @@
-from decimal import Decimal
+from sqlalchemy import (
+    Column,
+    Integer,
+    Numeric,
+    Enum,
+    Index,
+    UniqueConstraint,
+)
+from api_bloxs.base.model import Model
+from sqlalchemy.orm import relationship
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric
 
-from api_bloxs.infra.database import Base
+from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
 
 
-class Account(Base):
+class Account(Model):
+    """Account model"""
+
     __tablename__ = "account"
 
-    id = Column(Integer, primary_key=True)
-    id_conta = Column(Integer, nullable=False)
-    id_pessoa = Column(Integer, nullable=False)
-    saldo = Column(Numeric, nullable=False)
-    limite_saque_diario = Column(Numeric, nullable=False)
-    flag_ativo = Column(Boolean, nullable=False)
-    tipo_conta = Column(Integer, nullable=False)
-    data_criacao = Column(DateTime, nullable=False)
+    account_id = Column(Integer, nullable=False, doc="Account ID", comment="Account ID")
+    person_id = Column(Integer, nullable=False, doc="Person ID", comment="Person ID")
+    balance = Column(
+        Numeric(precision=10, scale=2), nullable=False, doc="Balance", comment="Balance"
+    )
+    daily_withdrawal_limit = Column(
+        Numeric(precision=10, scale=2),
+        nullable=False,
+        doc="Daily withdrawal limit",
+        comment="Daily withdrawal limit",
+    )
+
+    account_type = Column(
+        Enum(AccountTypeEnum),
+        nullable=False,
+        doc="Account type",
+        comment="Account type",
+    )
+
+    # person = relationship("Person", back_populates="account")
+
+    Index(
+        "idx_person_id",
+        person_id,
+    )
+
+    UniqueConstraint("account_id", "account_type", name="uq_account_id_account_type")
+
+    Index(
+        "idx_account_id_account_type",
+        account_id,
+        account_type,
+    )
 
     def __repr__(self) -> str:
-        return f"<Account(id={self.id}, id_conta={self.id_conta}, id_pessoa={self.id_pessoa}, saldo={self.saldo}, limite_saque_diario={self.limite_saque_diario}, flag_ativo={self.flag_ativo}, tipo_conta={self.tipo_conta}, data_criacao={self.data_criacao})>"
+        return f"<Account(account_id={self.account_id}, person_id={self.person_id}, balance={self.balance}, id={self.id}, daily_withdrawal_limit={self.daily_withdrawal_limit}, is_active={self.is_active}, account_type={self.account_type}, creation_date={self.creation_date})>"
