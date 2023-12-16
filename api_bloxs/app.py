@@ -46,7 +46,7 @@ class DatabaseInitializer:
     def initialize(self) -> None:
         """Set up the database."""
 
-        if self.config.FLASK_ENV() == "test":
+        if self.config.FLASK_ENV() == "development":
             self.create_database()
 
         self.container.migrate()

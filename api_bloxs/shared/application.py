@@ -31,6 +31,9 @@ class ApplicationContainer(containers.DeclarativeContainer):
     app = providers.Singleton(
         APIFlask,
         __name__,
+        title="API Bloxs",
+        version="1.0.0",
+        docs_path="/openapi/docs",
     )
 
     db = providers.Singleton(

@@ -1,5 +1,5 @@
 from apiflask import APIBlueprint
-from dependency_injector.wiring import Provide, inject
+from dependency_injector.wiring import inject
 
 from api_bloxs.modules.person.dto.person import PersonDto
 from api_bloxs.modules.person.model.person import Person
