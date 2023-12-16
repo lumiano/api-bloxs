@@ -42,4 +42,11 @@ db@downgrade:
 	@echo "Downgrading the database..."
 	$(call run_database_command,downgrade)
 
-	
+
+db@current:
+	@echo "Showing the current database revision..."
+	$(call run_database_command,current)
+
+docker@up:
+	@echo "Starting the Docker containers..."
+	docker compose --env-file .env -f docker-compose.yml up -d --force-recreate 
