@@ -1,12 +1,11 @@
-.PHONY: install start@dev clean
-
+.PHONY: install start@dev clean db@init db@migrate db@up db@rev db@down db@his db@curr docker@up
 FLASK_APP := app.py
 PACKAGE_NAME := api_bloxs
 APP := $(PACKAGE_NAME)/$(FLASK_APP)
 POETRY_RUN_FLASK = poetry run flask --app $(APP)
 
 
-define run_database_command
+define run_flask_context
 	$(POETRY_RUN_FLASK) db $(1) $(2)
 endef
 
@@ -23,29 +22,36 @@ clean:
 	@echo "Cleaning up..."
 	poetry env remove $(shell poetry env info --path)
 	rm -rf __pycache__
-	rm -f *.pyc
+
 
 
 db@init:
 	@echo "Initializing the database..."
-	$(call run_database_command,init)
+	$(call run_flask_context,init)
 
 db@migrate:
 	@echo "Migrating the database..."
-	$(call run_database_command,migrate,-m $(m))
+	$(call run_flask_context,migrate,-m $(m))
 
-db@upgrade:
-	@echo "Upgrading the database..."
-	$(call run_database_command,upgrade)
-
-db@downgrade:
+db@up:
 	@echo "Downgrading the database..."
-	$(call run_database_command,downgrade)
+	$(call run_flask_context,downgrade)
 
+db@rev:
+	@echo "Revising the database..."
+	$(call run_flask_context,revision,-c $(c))
 
-db@current:
+db@down:
+	@echo "Downgrading the database..."
+	$(call run_flask_context,upgrade)
+
+db@his:
+	@echo "Showing the database history..."
+	$(call run_flask_context,history)
+
+db@curr:
 	@echo "Showing the current database revision..."
-	$(call run_database_command,current)
+	$(call run_flask_context,current)
 
 docker@up:
 	@echo "Starting the Docker containers..."

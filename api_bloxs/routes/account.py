@@ -1,15 +1,32 @@
-import logging
-from typing import List
+from datetime import datetime
+from decimal import Decimal
 
 from apiflask import APIBlueprint, HTTPError
 from dependency_injector.wiring import Provide, inject
 
+from api_bloxs.infra.errors import InternalServerError
+from api_bloxs.infra.trace import Trace
 from api_bloxs.modules.account.dto.account import AccountDto
+from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
+from api_bloxs.modules.account.errors.errors import (
+    AccountBalanceError,
+    AccountDailyWithdrawalLimitError,
+    AccountDeactivated,
+    AccountNotFound,
+    AccountTypePerson,
+)
 from api_bloxs.modules.account.model.account import Account
 from api_bloxs.modules.account.services.account import AccountService
+from api_bloxs.modules.deposit.model.deposit import DepositDto
+from api_bloxs.modules.person.errors.errors import PersonNotActive, PersonNotFoundError
+from api_bloxs.modules.person.services.person import PersonService
+from api_bloxs.modules.transaction.model.transaction import Transaction
+from api_bloxs.modules.transaction.services.transaction import TransactionService
+from api_bloxs.modules.withdraw.dto.withdraw import WithdrawDto
+from api_bloxs.routes.login import auth
 from api_bloxs.shared.application import ApplicationContainer
 
-account_blueprint = APIBlueprint(
+api = APIBlueprint(
     "account",
     __name__,
     tag="Account",
@@ -18,49 +35,69 @@ account_blueprint = APIBlueprint(
 
 
 class AccountController:
-    @account_blueprint.get(
+    @api.get(
         "/<int:account_id>",
     )
-    @account_blueprint.doc(
+    @api.doc(
         description="Get account by id",
         operation_id="get_account_by_id",
-        security="ApiKeyAuth",
-        summary="Get account by id",
-        tags=["Account"],
         responses={
             200: {"description": "Account found"},
             404: {"description": "Account not found"},
+            500: {"description": "Internal server error"},
+        },
+        summary="Get account by id",
+        tags=["Account"],
+        security="ApiKeyAuth",
+    )
+    @api.output(
+        description="Account found",
+        schema_name="Account",
+        schema=AccountDto,
+        links={
+            "self": {
+                "operationId": "get_account_by_id",
+                "parameters": {"account_id": "$response.body#/id"},
+            }
         },
     )
-    @account_blueprint.output(AccountDto)
+    @auth.login_required
     @inject
     def get_by_id(
         account_id: int,
         account_service: AccountService = Provide[
-            ApplicationContainer.services.account_service
+            ApplicationContainer.services.account
         ],
+        trace: Trace = Provide[ApplicationContainer.infra.logger],
     ):
         try:
             account = account_service.get_by_id(account_id)
 
             if account is None:
-                raise AccountNotFoundError(account_id)
+                raise AccountNotFound()
 
-            return Account(**account)
+            if account.is_active is False:
+                raise AccountDeactivated()
 
-        except AccountNotFoundError as e:
-            logging.info(f"Account not found id: {account_id}")
-            raise HTTPError(404, str(e), detail="Account id not found")
+            return account
+
+        except HTTPError as e:
+            trace.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
 
         except Exception as e:
-            logging.info(f"Internal server error: {e}")
-            raise HTTPError(500, str(e), detail="Internal server error")
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
 
-    @account_blueprint.post("/")
-    @account_blueprint.input(
+            raise InternalServerError()
+
+    @api.post("/")
+    @api.input(
         schema=AccountDto,
         example={
-            "account_id": 1,
+            "id": 1,
             "person_id": 1,
             "balance": 1000.0,
             "daily_withdrawal_limit": 1000.0,
@@ -68,28 +105,33 @@ class AccountController:
             "is_active": True,
             "creation_date": "2021-08-01T00:00:00",
             "update_date": "2021-08-01T00:00:00",
-            "id": 1,
         },
         arg_name="AccountDto",
         schema_name="AccountDto",
     )
-    @account_blueprint.doc(
+    @api.doc(
         description="Create account",
         operation_id="create_account",
         responses={
             201: {"description": "Account created"},
-            400: {"description": "Bad request"},
+            400: {"description": "Invalid account type"},
+            400: {"description": "Invalid balance"},
+            400: {"description": "Invalid daily withdrawal limit"},
+            400: {"description": "Person not found"},
+            400: {"description": "Person not active"},
+            400: {"description": "Account already exists"},
+            500: {"description": "Internal server error"},
         },
         summary="Create account",
         tags=["Account"],
         security="ApiKeyAuth",
     )
-    @account_blueprint.output(
+    @api.output(
         description="Account created",
         schema_name="Account",
         schema=AccountDto,
         example={
-            "account_id": 1,
+            "id": 1,
             "person_id": 1,
             "balance": 1000.0,
             "daily_withdrawal_limit": 1000.0,
@@ -97,53 +139,255 @@ class AccountController:
             "is_active": True,
             "creation_date": "2021-08-01T00:00:00",
             "update_date": "2021-08-01T00:00:00",
-            "id": 1,
         },
         status_code=201,
     )
+    @auth.login_required
     @inject
     def create(
         AccountDto: AccountDto,
         account_service: AccountService = Provide[
-            ApplicationContainer.services.account_service
+            ApplicationContainer.services.account
         ],
+        person_service: PersonService = Provide[ApplicationContainer.services.person],
+        trace: Trace = Provide[ApplicationContainer.infra.logger],
     ):
         try:
             account = Account(**AccountDto)
 
-            account_exists = account_service.find_by_params(
-                {"person_id": account.person_id, "account_type": account.account_type}
+            if account.balance < 0:
+                raise AccountBalanceError()
+
+            if account.account_type not in AccountTypeEnum:
+                raise AccountTypePerson()
+
+            person = person_service.get_by_id(account.person_id)
+
+            account_type_person = account_service.get_by_type_and_person_id(
+                account.account_type, account.person_id
             )
 
-            if account_exists:
-                raise AccountAlreadyExists(account.account_id)
+            if account_type_person is not None:
+                raise AccountTypePerson()
+
+            if person is None:
+                raise PersonNotFoundError()
+
+            if person.is_active is False:
+                raise PersonNotActive()
 
             return account_service.create(account)
 
-        except AccountAlreadyExists as e:
-            raise HTTPError(404, str(e), detail="Account already exists")
+        except HTTPError as e:
+            trace.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
 
         except Exception as e:
-            raise HTTPError(500, str(e), detail="Internal server error")
+            print(e)
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
 
+            raise InternalServerError()
 
-class NotFoundError(Exception):
-    entity_name: str
+    @api.post("/<int:account_id>/deposit")
+    @api.doc(
+        security="ApiKeyAuth",
+        description="Deposit",
+        operation_id="deposit",
+        responses={
+            200: {"description": "Deposit"},
+            401: {"description": "Unauthorized"},
+            404: {"description": "Account not found"},
+            500: {"description": "Internal server error"},
+        },
+        summary="Deposit",
+        tags=["Account"],
+    )
+    @api.input(
+        schema_name="DepositDto",
+        schema=DepositDto,
+        example={
+            "amount": 1000.0,
+        },
+        examples={
+            "DepositDto": {
+                "value": {
+                    "amount": 1000.0,
+                },
+                "summary": "Deposit",
+            }
+        },
+        arg_name="deposit_dto",
+    )
+    @api.output(
+        example={
+            "balance": 1000.0,
+        },
+        examples={
+            "DepositDto": {
+                "value": {
+                    "balance": 1000.0,
+                },
+                "summary": "Deposit",
+            }
+        },
+        schema_name="DepositDto",
+        schema=DepositDto,
+    )
+    @inject
+    @auth.login_required
+    def deposit(
+        account_id: int,
+        deposit_dto: DepositDto,
+        account_service: AccountService = Provide[
+            ApplicationContainer.services.account
+        ],
+        tracer: Trace = Provide[ApplicationContainer.infra.logger],
+        transaction_service: TransactionService = Provide[
+            ApplicationContainer.services.transaction
+        ],
+    ):
+        try:
+            account = account_service.get_by_id(account_id)
 
-    def __init__(self, entity_id):
-        super().__init__(f"{self.entity_name} not found id: {entity_id}")
+            if account.is_active is False:
+                raise AccountDeactivated()
 
+            amount = deposit_dto["amount"]
 
-class EntityAlreadyExists(Exception):
-    entity_name: str
+            if account is None:
+                raise AccountNotFound()
 
-    def __init__(self, entity_id):
-        super().__init__(f"{self.entity_name} already exists id: {entity_id}")
+            account.balance += Decimal(str(amount))
 
+            account_service.update(account)
 
-class AccountNotFoundError(NotFoundError):
-    entity_name = "Account"
+            transaction = Transaction(
+                is_active=True,
+                account_id=account_id,
+                amount=amount,
+                transaction_date=datetime.now(),
+            )
 
+            transaction_created = transaction_service.create(transaction)
 
-class AccountAlreadyExists(EntityAlreadyExists):
-    entity_name = "Account"
+            return transaction_created
+        except AccountNotFound as e:
+            tracer.logger.error(e)
+            raise e
+
+        except Exception as e:
+            tracer.logger.error(e)
+            raise e
+
+    @api.post("/<int:account_id>/withdraw")
+    @api.doc(
+        description="Withdraw",
+        operation_id="withdraw",
+        responses={
+            200: {"description": "Withdraw"},
+            401: {"description": "Unauthorized"},
+            404: {"description": "Account not found"},
+            500: {"description": "Internal server error"},
+        },
+        summary="Withdraw",
+        tags=["Account"],
+        security="ApiKeyAuth",
+    )
+    @api.input(
+        schema_name="WithdrawDto",
+        schema=WithdrawDto,
+        example={
+            "amount": 1000.0,
+        },
+        examples={
+            "WithdrawDto": {
+                "value": {
+                    "amount": 1000.0,
+                },
+                "summary": "Withdraw",
+            }
+        },
+        arg_name="WithdrawDto",
+    )
+    @api.output(
+        example={
+            "balance": 1000.0,
+        },
+        examples={
+            "WithdrawDto": {
+                "value": {
+                    "balance": 1000.0,
+                },
+                "summary": "Withdraw",
+            }
+        },
+        schema_name="WithdrawDto",
+        schema=WithdrawDto,
+        links={
+            "self": {
+                "operationId": "withdraw",
+                "parameters": {"account_id": "$response.body#/id"},
+            }
+        },
+        description="Withdraw",
+    )
+    @auth.login_required
+    @inject
+    def withdraw(
+        WithdrawDto: WithdrawDto,
+        account_id: int,
+        account_service: AccountService = Provide[
+            ApplicationContainer.services.account
+        ],
+        transaction_service: TransactionService = Provide[
+            ApplicationContainer.services.transaction
+        ],
+        tracer: Trace = Provide[ApplicationContainer.infra.logger],
+    ):
+        try:
+            account = account_service.get_by_id(account_id)
+
+            if account.is_active is False:
+                raise AccountDeactivated()
+
+            if account is None:
+                raise AccountNotFound()
+
+            amount = WithdrawDto["amount"]
+
+            amount = Decimal(str(amount))
+
+            if account.balance < amount:
+                raise AccountBalanceError()
+
+            if account.daily_withdrawal_limit < amount:
+                raise AccountDailyWithdrawalLimitError()
+
+            account.balance -= amount
+
+            account_service.update(account)
+
+            transaction = Transaction(
+                is_active=True,
+                account_id=account_id,
+                amount=amount,
+                transaction_date=datetime.now(),
+            )
+
+            transaction_created = transaction_service.create(transaction)
+
+            return transaction_created
+
+        except HTTPError as e:
+            tracer.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
+
+        except Exception as e:
+            tracer.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
+            raise e

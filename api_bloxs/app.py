@@ -1,21 +1,51 @@
-from typing import Dict, List
+from glob import glob
+from importlib import import_module
+from os.path import basename, isfile, join
+from pathlib import Path
 
-from apiflask import APIBlueprint, APIFlask
+from apiflask import APIFlask
+from flask_migrate import Migrate
+from flask_sqlalchemy import SQLAlchemy
 
-from api_bloxs.routes.account import account_blueprint
-from api_bloxs.routes.person import person_blueprint
+from api_bloxs.base.model import Base
 from api_bloxs.shared.application import ApplicationContainer
 
 
-class AppConfigurator:
-    """Configures application settings."""
+class App:
+    """Application class."""
 
-    def __init__(self, app, config: ApplicationContainer) -> None:
-        self.app = app
-        self.config = config
+    def __init__(self) -> None:
+        """Initialize application."""
+        self.app = APIFlask(
+            __name__,
+            title="API Bloxs",
+            version="1.0.0",
+            docs_path="/openapi/docs",
+            json_errors=False,
+        )
 
-    def configure(self) -> None:
-        """Set up application configuration."""
+        # add middleware in path
+
+        self.app.security_schemes = {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "X-API-Key",
+            }
+        }
+
+        self.container = ApplicationContainer()
+        self.config = self.container.config
+        self.setup()
+
+    def setup(self) -> None:
+        """Set up the application."""
+        self._configure_app()
+        self._setup_database()
+        self._register_blueprints()
+
+    def _configure_app(self) -> None:
+        """Configure application settings."""
         config_data = {
             "SQLALCHEMY_DATABASE_URI": self.config.SQLALCHEMY_DATABASE_URI(),
             "SQLALCHEMY_TRACK_MODIFICATIONS": self.config.SQLALCHEMY_TRACK_MODIFICATIONS(),
@@ -35,76 +65,38 @@ class AppConfigurator:
 
         self.app.config.update(config_data)
 
-
-class DatabaseInitializer:
-    """Initializes the application database."""
-
-    def __init__(self, container: ApplicationContainer, config) -> None:
-        self.container = container
-        self.config = config
-
-    def initialize(self) -> None:
+    def _setup_database(self) -> None:
         """Set up the database."""
+        db = SQLAlchemy(
+            app=self.app,
+            add_models_to_shell=True,
+            metadata=Base.metadata,
+        )
 
-        if self.config.FLASK_ENV() == "development":
-            self.create_database()
+        migrate = Migrate(self.app, db)
+        migrate.init_app(self.app, db)
 
-        self.container.migrate()
+    def _register_blueprints(self) -> None:
+        """Register blueprints with the application."""
+        routes = glob(join(Path(__file__).parent, "routes/*.py"))
 
-    def create_database(self) -> None:
-        """Create the database."""
-        gateways = self.container.gateways()
-        db = gateways.database()
-        db.create_database()
+        modules = [
+            basename(f)[:-3]
+            for f in routes
+            if isfile(f) and not f.endswith("__init__.py")
+        ]
 
+        blueprints = [
+            import_module(f"api_bloxs.routes.{module}").api for module in modules
+        ]
 
-class BlueprintInitializer:
-    """Registers blueprints with the application."""
-
-    def __init__(self, app) -> None:
-        self.app = app
-
-    def register_blueprints(
-        self,
-    ) -> None:
-        """Register blueprints."""
-        for blueprint in self.load_blueprints():
+        for blueprint in blueprints:
             self.app.register_blueprint(blueprint)
 
-    def load_blueprints(self) -> List[APIBlueprint]:
-        """Load blueprints."""
-        return [account_blueprint, person_blueprint]
+    @classmethod
+    def __call__(cls) -> APIFlask:
+        """Call the application."""
+        return cls().app
 
 
-class App:
-    """Application class."""
-
-    def __init__(self) -> None:
-        """Initialize application."""
-        self.container = ApplicationContainer()
-        self.app = self.container.app()
-        self.config = self.container.config
-
-        self.setup()
-
-    def setup(self) -> None:
-        """Set up the application."""
-
-        configurer = AppConfigurator(self.app, self.config)
-
-        configurer.configure()
-
-        database_initializer = DatabaseInitializer(self.container, self.config)
-
-        database_initializer.initialize()
-
-        blueprint_registrar = BlueprintInitializer(self.app)
-
-        blueprint_registrar.register_blueprints()
-
-    def __call__(self) -> APIFlask:
-        """Return application."""
-        return self.app
-
-
-app = App().__call__()
+app = App.__call__()

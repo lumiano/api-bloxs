@@ -1,33 +1,37 @@
-from contextlib import AbstractContextManager
-from typing import Callable
+import dataclasses
+from abc import ABC, abstractmethod
+from typing import Any
 
-from sqlalchemy.orm import Session
+from api_bloxs.infra.database import Database
 
 
-class BaseRepository:
-    """Base repository class for all repositories."""
+@dataclasses.dataclass
+class Repository(ABC):
+    """Base repository"""
 
-    def __init__(self, session: Session, model):
-        self.session = session
+    database: Database
 
-        self.model = model
+    @abstractmethod
+    def get_by_id(self, id: int) -> Any:
+        """Get by id"""
+        pass
 
-    def get_all(self):
-        return self.session.query(self.model).all()
+    @abstractmethod
+    def get_all(self) -> Any:
+        """Get all"""
+        pass
 
-    def get_by_id(self, id):
-        return self.session.query(self.model).filter_by(id=id).first()
+    @abstractmethod
+    def create(self, entity: Any) -> Any:
+        """Create"""
+        pass
 
-    def create(self, obj):
-        self.session.add(obj)
-        self.session.commit()
-        return obj
+    @abstractmethod
+    def update(self, id: int, entity: Any) -> Any:
+        """Update"""
+        pass
 
-    def update(self, obj):
-        self.session.commit()
-        return obj
-
-    def delete(self, obj):
-        self.session.delete(obj)
-        self.session.commit()
-        return obj
+    @abstractmethod
+    def delete(self, id: int) -> Any:
+        """Delete"""
+        pass

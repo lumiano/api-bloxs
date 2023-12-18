@@ -1,10 +1,32 @@
-import logging
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
 
-class BaseService:
-    """Base Service"""
+@dataclass
+class Service(ABC):
+    """BaseService"""
 
-    def __init__(self) -> None:
-        self.logger = logging.getLogger(
-            f"{__name__}.{self.__class__.__name__}",
-        )
+    @abstractmethod
+    def get_by_id(self, id):
+        """Get by id"""
+        pass
+
+    @abstractmethod
+    def get_all(self):
+        """Get all"""
+        pass
+
+    @abstractmethod
+    def create(self, entity):
+        """Create"""
+        pass
+
+    @abstractmethod
+    def update(self, id, entity):
+        """Update"""
+        pass
+
+    @abstractmethod
+    def delete(self, id):
+        """Delete"""
+        pass

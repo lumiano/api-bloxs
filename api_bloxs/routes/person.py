@@ -1,10 +1,16 @@
-from apiflask import APIBlueprint
-from dependency_injector.wiring import inject
+from trace import Trace
+
+from apiflask import APIBlueprint, HTTPError
+from dependency_injector.wiring import Provide, inject
 
 from api_bloxs.modules.person.dto.person import PersonDto
+from api_bloxs.modules.person.errors.errors import PersonAlreadyExists
 from api_bloxs.modules.person.model.person import Person
+from api_bloxs.modules.person.services.person import PersonService
+from api_bloxs.routes.login import auth
+from api_bloxs.shared.application import ApplicationContainer
 
-person_blueprint = APIBlueprint(
+api = APIBlueprint(
     "person",
     __name__,
     tag="Person",
@@ -13,37 +19,83 @@ person_blueprint = APIBlueprint(
 
 
 class PersonController:
-    @person_blueprint.post("/")
-    @person_blueprint.input(
+    @api.post("/")
+    @api.input(
         schema=PersonDto,
         arg_name="PersonDto",
         examples={
             "PersonDto": {
                 "value": {
-                    "id_person": 1,
+                    "id": 1,
                     "creation_date": "2021-01-01T00:00:00",
                     "update_date": "2021-01-01T00:00:00",
                     "name": "John Doe",
                     "document": "12345678901",
                     "birthday": "1990-01-01",
+                    "is_active": True,
                 }
             }
         },
     )
-    @person_blueprint.doc(
+    @api.doc(
+        security="ApiKeyAuth",
         description="Create person",
         operation_id="create_person",
         responses={
-            201: {"description": "Person created"},
-            400: {"description": "Invalid data"},
+            200: {"description": "Person created"},
+            400: {"description": "Invalid birthday"},
+            400: {"description": "Person already exists"},
         },
         summary="Create person",
         tags=["Person"],
     )
+    @api.output(
+        schema=PersonDto,
+        status_code=200,
+        content_type="application/json",
+        description="Person created",
+        examples={
+            "PersonDto": {
+                "value": {
+                    "id": 1,
+                    "creation_date": "2021-01-01T00:00:00",
+                    "update_date": "2021-01-01T00:00:00",
+                    "name": "John Doe",
+                    "document": "12345678901",
+                    "birthday": "1990-01-01",
+                    "is_active": True,
+                }
+            }
+        },
+    )
+    @auth.login_required
     @inject
-    def create_person(PersonDto: PersonDto):
-        person = Person(**PersonDto)
+    def create_person(
+        PersonDto: PersonDto,
+        person_service: PersonService = Provide[ApplicationContainer.services.person],
+        trace: Trace = Provide[ApplicationContainer.infra.logger],
+    ):
+        try:
+            person = Person(**PersonDto)
 
-        print(person)
+            person_exists = person_service.find_by(
+                document=person.document, name=person.name, id=person.id
+            )
 
-        return {"status": "ok"}
+            if person_exists:
+                raise PersonAlreadyExists()
+
+            person_created = person_service.create(person)
+
+            return person_created
+        except HTTPError as e:
+            trace.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
+
+        except Exception as e:
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
+
+            raise e
