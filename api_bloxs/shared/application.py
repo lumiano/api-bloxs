@@ -11,16 +11,13 @@ class ApplicationContainer(containers.DeclarativeContainer):
 
     wiring_config = containers.WiringConfiguration(packages=["api_bloxs.routes"])
 
-    environment = Environment()
+    environment: providers.Provider[Environment] = providers.Singleton(Environment)
 
-    loaded_environment = environment.load()
+    _envs = environment()
 
     config = providers.Configuration()
 
-    config.from_dict(
-        loaded_environment.__dict__,
-        required=True,
-    )
+    config.from_dict(_envs.load().__dict__, required=True)
 
     infra: providers.Provider[InfraContainer] = providers.Container(
         InfraContainer, config=config

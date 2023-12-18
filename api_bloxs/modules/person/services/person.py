@@ -11,8 +11,6 @@ class PersonService(Service):
     def __init__(self, person_repository: PersonRepository):
         self.person_repository = person_repository
 
-        print("PersonService.__init__")
-
     def get_all(self) -> List[Person]:
         """Get all persons."""
         return self.person_repository.get_all()
