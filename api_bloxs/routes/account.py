@@ -9,19 +9,17 @@ from api_bloxs.infra.trace import Trace
 from api_bloxs.modules.account.dto.account import AccountDto
 from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
 from api_bloxs.modules.account.errors.errors import (
-    AccountBalanceError,
-    AccountDailyWithdrawalLimitError,
-    AccountDeactivated,
-    AccountNotFound,
-    AccountTypePerson,
-)
+    AccountBalanceError, AccountDailyWithdrawalLimitError, AccountDeactivated,
+    AccountNotFound, AccountTypePerson)
 from api_bloxs.modules.account.model.account import Account
 from api_bloxs.modules.account.services.account import AccountService
 from api_bloxs.modules.deposit.model.deposit import DepositDto
-from api_bloxs.modules.person.errors.errors import PersonNotActive, PersonNotFoundError
+from api_bloxs.modules.person.errors.errors import (PersonNotActive,
+                                                    PersonNotFoundError)
 from api_bloxs.modules.person.services.person import PersonService
 from api_bloxs.modules.transaction.model.transaction import Transaction
-from api_bloxs.modules.transaction.services.transaction import TransactionService
+from api_bloxs.modules.transaction.services.transaction import \
+    TransactionService
 from api_bloxs.modules.withdraw.dto.withdraw import WithdrawDto
 from api_bloxs.routes.login import auth
 from api_bloxs.shared.application import ApplicationContainer
