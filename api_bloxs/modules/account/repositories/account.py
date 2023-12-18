@@ -1,38 +1,56 @@
-from abc import ABC, abstractmethod
-from contextlib import AbstractContextManager
-from typing import Callable, List
+import dataclasses
+from typing import List
 
-from sqlalchemy import and_
-
-from sqlalchemy.orm import Session
-
-from api_bloxs.base.repository import BaseRepository
+from api_bloxs.base.repository import Repository
+from api_bloxs.infra.database import Database
 from api_bloxs.modules.account.model.account import Account
 
 
-
-class AccountRepository(BaseRepository):
+class AccountRepository(Repository):
     """Account repository"""
 
-    def __init__(self, session: Callable[..., AbstractContextManager[Session]]) -> None:
-        super().__init__(session=session, model=Account)
+    def __init__(self, database: Database):
+        self.database = database
 
-    def get_by_id(self, id) -> Account:
-        """Get account by id"""
-        with self.session() as session:
-            account = session.query(Account).filter_by(id=id).first()
-            return account
+    def get_by_id(self, id: int) -> Account:
+        """Get by id"""
 
-    def create(self, obj: Account) -> Account:
-        """Create account"""
-        with self.session() as session:
-            session.add(obj)
+        with self.database.session() as session:
+            return session.query(Account).filter_by(id=id).first()
+
+    def get_all(self) -> List[Account]:
+        """Get all"""
+        with self.database.session() as session:
+            return session.query(Account).all()
+
+    def create(self, account: Account) -> Account:
+        """Create"""
+        with self.database.session() as session:
+            session.add(account)
+
             session.commit()
-            return obj
+            return self.get_by_id(account.id)
 
-    def find_by_params(self, params) -> Account:
-        """Find account by params"""
+    def update(self, account: Account) -> Account:
+        """Update"""
+        with self.database.session() as session:
+            session.merge(account)
+            session.commit()
 
-        with self.session() as session:
-            account = session.query(Account).filter_by(**params).first()
-            return account
+            return self.get_by_id(account.id)
+
+    def delete(self, id: int) -> None:
+        """Delete"""
+        with self.database.session() as session:
+            session.query(Account).filter_by(id=id).delete()
+            session.commit()
+
+    def get_by_type_and_person_id(self, account_type: str, person_id: int) -> Account:
+        """Get by id"""
+
+        with self.database.session() as session:
+            return (
+                session.query(Account)
+                .filter_by(account_type=account_type, person_id=person_id)
+                .first()
+            )

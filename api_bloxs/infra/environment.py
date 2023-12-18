@@ -16,6 +16,7 @@ class EnvironmentVariables:
     SQLALCHEMY_DATABASE_URI: str
     SQLALCHEMY_TRACK_MODIFICATIONS: bool
     SQLALCHEMY_ECHO: bool
+    API_KEY: str
 
 
 class Environment:
@@ -47,4 +48,5 @@ class Environment:
             SQLALCHEMY_DATABASE_URI=self.get("SQLALCHEMY_DATABASE_URI"),
             SQLALCHEMY_TRACK_MODIFICATIONS=self.get("SQLALCHEMY_TRACK_MODIFICATIONS"),
             SQLALCHEMY_ECHO=self.get("SQLALCHEMY_ECHO"),
+            API_KEY=self.get("API_KEY"),
         )
