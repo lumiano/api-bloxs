@@ -2,7 +2,7 @@ import dataclasses
 from abc import ABC, abstractmethod
 from contextlib import AbstractContextManager
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as SQLAlchemySession
 
 
 @dataclasses.dataclass
@@ -10,6 +10,6 @@ class Database(ABC):
     """Database"""
 
     @abstractmethod
-    def session(self) -> AbstractContextManager[Session]:
+    def context(self) -> AbstractContextManager[SQLAlchemySession]:
         """Session"""
         pass

@@ -17,6 +17,9 @@ from api_bloxs.modules.deposit.model.deposit import DepositDto
 from api_bloxs.modules.person.errors.errors import (PersonNotActive,
                                                     PersonNotFoundError)
 from api_bloxs.modules.person.services.person import PersonService
+from api_bloxs.modules.transaction.dto.query import TransactionQueryDto
+from api_bloxs.modules.transaction.mappers.pagination import \
+    TransactionsPagination
 from api_bloxs.modules.transaction.model.transaction import Transaction
 from api_bloxs.modules.transaction.services.transaction import \
     TransactionService
@@ -66,7 +69,7 @@ class AccountController:
         account_service: AccountService = Provide[
             ApplicationContainer.services.account
         ],
-        trace: Trace = Provide[ApplicationContainer.infra.logger],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
     ):
         try:
             account = account_service.get_by_id(account_id)
@@ -148,7 +151,7 @@ class AccountController:
             ApplicationContainer.services.account
         ],
         person_service: PersonService = Provide[ApplicationContainer.services.person],
-        trace: Trace = Provide[ApplicationContainer.infra.logger],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
     ):
         try:
             account = Account(**AccountDto)
@@ -242,7 +245,7 @@ class AccountController:
         account_service: AccountService = Provide[
             ApplicationContainer.services.account
         ],
-        tracer: Trace = Provide[ApplicationContainer.infra.logger],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
         transaction_service: TransactionService = Provide[
             ApplicationContainer.services.transaction
         ],
@@ -250,13 +253,13 @@ class AccountController:
         try:
             account = account_service.get_by_id(account_id)
 
+            if account is None:
+                raise AccountNotFound()
+
             if account.is_active is False:
                 raise AccountDeactivated()
 
             amount = deposit_dto["amount"]
-
-            if account is None:
-                raise AccountNotFound()
 
             account.balance += Decimal(str(amount))
 
@@ -273,11 +276,11 @@ class AccountController:
 
             return transaction_created
         except AccountNotFound as e:
-            tracer.logger.error(e)
+            trace.logger.error(e)
             raise e
 
         except Exception as e:
-            tracer.logger.error(e)
+            trace.logger.error(e)
             raise e
 
     @api.post("/<int:account_id>/withdraw")
@@ -343,7 +346,7 @@ class AccountController:
         transaction_service: TransactionService = Provide[
             ApplicationContainer.services.transaction
         ],
-        tracer: Trace = Provide[ApplicationContainer.infra.logger],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
     ):
         try:
             account = account_service.get_by_id(account_id)
@@ -380,12 +383,180 @@ class AccountController:
             return transaction_created
 
         except HTTPError as e:
-            tracer.logger.error(
+            trace.logger.error(
                 f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
             )
 
             raise e
 
         except Exception as e:
-            tracer.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
+            raise e
+
+    @api.post("/<int:account_id>/freezed")
+    @api.doc(
+        description="Account freezed",
+        operation_id="freezed",
+        responses={
+            200: {"description": "Freezed"},
+            401: {"description": "Unauthorized"},
+            404: {"description": "Account not found"},
+            500: {"description": "Internal server error"},
+        },
+        summary="Account freezed, you can't deposit or withdraw",
+        tags=["Account"],
+        security="ApiKeyAuth",
+    )
+    @api.output(
+        examples={
+            "AccountDto": {
+                "value": {
+                    "is_active": False,
+                },
+                "summary": "Freezed",
+            }
+        },
+        schema_name="AccountDto",
+        schema=AccountDto,
+        links={
+            "self": {
+                "operationId": "freezed",
+                "parameters": {"account_id": "$response.body#/id"},
+            }
+        },
+        description="Freezed",
+    )
+    @auth.login_required
+    @inject
+    def freezed(
+        account_id: int,
+        account_service: AccountService = Provide[
+            ApplicationContainer.services.account
+        ],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
+    ):
+        try:
+            account = account_service.get_by_id(account_id)
+
+            if account is None:
+                raise AccountNotFound()
+
+            if account.is_active is False:
+                raise AccountDeactivated()
+
+            account.is_active = False
+
+            account_service.update(account)
+
+            return account
+
+        except HTTPError as e:
+            trace.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
+
+        except Exception as e:
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
+            raise e
+
+    @api.get("/<int:account_id>/transaction")
+    @api.doc(
+        description="Get transactions by account id",
+        operation_id="transactions",
+        responses={
+            200: {"description": "Transactions"},
+            401: {"description": "Unauthorized"},
+            404: {"description": "Account not found"},
+            500: {"description": "Internal server error"},
+        },
+        summary="Get transactions by account id",
+        tags=["Account"],
+        security="ApiKeyAuth",
+    )
+    @api.input(
+        location="query",
+        arg_name="TransactionQueryDto",
+        schema_name="TransactionQueryDto",
+        schema=TransactionQueryDto,
+        example={
+            "page": 1,
+            "offset": 10,
+            "order_by": "transaction_date",
+            "sort": "desc",
+        },
+    )
+    @api.output(
+        description="Transactions",
+        schema_name="TransactionsPagination",
+        schema=TransactionsPagination,
+        example={
+            "data": [
+                {
+                    "id": 1,
+                    "account_id": 1,
+                    "amount": 1000.0,
+                    "transaction_date": "2021-08-01T00:00:00",
+                    "is_active": True,
+                    "creation_date": "2021-08-01T00:00:00",
+                    "update_date": "2021-08-01T00:00:00",
+                }
+            ],
+            "pagination": {
+                "page": 1,
+                "offset": 10,
+                "total": 1,
+            },
+        },
+    )
+    @inject
+    def transactions(
+        account_id: int,
+        TransactionQueryDto: TransactionQueryDto,
+        account_service: AccountService = Provide[
+            ApplicationContainer.services.account
+        ],
+        transaction_service: TransactionService = Provide[
+            ApplicationContainer.services.transaction
+        ],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
+    ) -> TransactionsPagination:
+        try:
+            account = account_service.get_by_id(account_id)
+
+            if account is None:
+                raise AccountNotFound()
+
+            if account.is_active is False:
+                raise AccountDeactivated()
+
+            transactions = transaction_service.get_all_by_account_id(
+                query={
+                    "account_id": account_id,
+                    "page": TransactionQueryDto["page"],
+                    "offset": TransactionQueryDto["offset"],
+                    "order_by": TransactionQueryDto["order_by"],
+                    "sort": TransactionQueryDto["sort"],
+                },
+            )
+
+            return {
+                "data": transactions,
+                "pagination": {
+                    "page": TransactionQueryDto["page"],
+                    "per_page": TransactionQueryDto["offset"],
+                    "total": len(transactions),
+                },
+            }
+
+        except HTTPError as e:
+            trace.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
+
+        except Exception as e:
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
             raise e

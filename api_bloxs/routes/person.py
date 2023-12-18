@@ -31,7 +31,7 @@ class PersonController:
                     "update_date": "2021-01-01T00:00:00",
                     "name": "John Doe",
                     "document": "12345678901",
-                    "birthday": "1990-01-01",
+                    "birthday": "2021-01-01T00:00:00",
                     "is_active": True,
                 }
             }
@@ -62,7 +62,7 @@ class PersonController:
                     "update_date": "2021-01-01T00:00:00",
                     "name": "John Doe",
                     "document": "12345678901",
-                    "birthday": "1990-01-01",
+                    "birthday": "2021-01-01T00:00:00",
                     "is_active": True,
                 }
             }
@@ -73,7 +73,7 @@ class PersonController:
     def create_person(
         PersonDto: PersonDto,
         person_service: PersonService = Provide[ApplicationContainer.services.person],
-        trace: Trace = Provide[ApplicationContainer.infra.logger],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
     ):
         try:
             person = Person(**PersonDto)

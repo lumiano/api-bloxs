@@ -1,5 +1,7 @@
 from apiflask import APIFlask
+from flask_sqlalchemy import SQLAlchemy
 
+from api_bloxs.base.model import Base
 from api_bloxs.shared.application import ApplicationContainer
 
 
@@ -20,11 +22,7 @@ class SQLAlchemyConfig:
         return cls._db(app)
 
     @classmethod
-    def _db(cls, app: APIFlask) -> None:
-        from flask_sqlalchemy import SQLAlchemy
-
-        from api_bloxs.base.model import Base
-
+    def _db(cls, app: APIFlask) -> SQLAlchemy:
         return SQLAlchemy(
             app=app,
             add_models_to_shell=True,

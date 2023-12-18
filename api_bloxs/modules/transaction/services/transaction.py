@@ -3,6 +3,7 @@ from typing import List
 from sqlalchemy import Transaction
 
 from api_bloxs.base.service import Service
+from api_bloxs.modules.transaction.dto.query import TransactionQueryDto
 from api_bloxs.modules.transaction.repositories.transaction import \
     TransactionRepository
 
@@ -31,6 +32,9 @@ class TransactionService(Service):
     def delete(self, transaction_id: int) -> None:
         return self.transaction_repository.delete(transaction_id)
 
-    def get_transactions_by_account_id(self, account_id: int) -> List[Transaction]:
-        """Get transactions by account id."""
-        return self.transaction_repository.get_transactions_by_account_id(account_id)
+    def get_all_by_account_id(
+        self,
+        query: TransactionQueryDto,
+    ) -> List[Transaction]:
+        """Get all transactions by account id."""
+        return self.transaction_repository.get_all_by_account_id(query)

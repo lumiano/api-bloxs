@@ -23,8 +23,6 @@ clean:
 	poetry env remove $(shell poetry env info --path)
 	rm -rf __pycache__
 
-
-
 db@init:
 	@echo "Initializing the database..."
 	$(call run_flask_context,init)

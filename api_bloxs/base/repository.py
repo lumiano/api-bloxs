@@ -9,7 +9,7 @@ from api_bloxs.infra.database import Database
 class Repository(ABC):
     """Base repository"""
 
-    database: Database
+    session: Database
 
     @abstractmethod
     def get_by_id(self, id: int) -> Any:

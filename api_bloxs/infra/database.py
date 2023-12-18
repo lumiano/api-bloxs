@@ -2,14 +2,16 @@ import dataclasses
 from contextlib import AbstractContextManager, contextmanager
 
 from sqlalchemy import create_engine, orm
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session as SQLAlchemySession
 
 from api_bloxs.base.database import Database
 from api_bloxs.infra.trace import Trace
 
 
 @dataclasses.dataclass
-class MySQLDatabase(Database):
+class MySQLDatabase(
+    Database,
+):
     """MySQL Database"""
 
     def __init__(self, db_url: str, trace: Trace) -> None:
@@ -25,10 +27,11 @@ class MySQLDatabase(Database):
         )
 
     @contextmanager
-    def session(
+    def context(
         self,
-    ) -> AbstractContextManager[Session]:
+    ) -> AbstractContextManager[SQLAlchemySession]:
         session = self._session()
+
         try:
             yield session
             self.trace.logger.info("Commiting session")

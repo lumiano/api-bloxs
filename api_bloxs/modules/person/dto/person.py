@@ -29,7 +29,8 @@ class PersonDto(Schema):
     birthday = fields.Date(
         required=True,
         description="Birthday",
-        example="1990-01-01",
+        example="1990-01-01:00:00:00",
+        format="%Y-%m-%dT%H:%M:%S",
     )
 
     is_active = fields.Boolean(

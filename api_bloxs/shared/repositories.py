@@ -12,13 +12,13 @@ class RepositoriesContainer(containers.DeclarativeContainer):
     infra = providers.DependenciesContainer()
 
     account: providers.Provider[AccountRepository] = providers.Factory(
-        AccountRepository, database=infra.database
+        AccountRepository, session=infra.database
     )
 
     person: providers.Provider[PersonRepository] = providers.Factory(
-        PersonRepository, database=infra.database
+        PersonRepository, session=infra.database
     )
 
     transaction: providers.Provider[TransactionRepository] = providers.Factory(
-        TransactionRepository, database=infra.database
+        TransactionRepository, session=infra.database
     )

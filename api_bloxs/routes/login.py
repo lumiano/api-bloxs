@@ -46,37 +46,3 @@ class AuthController:
         config = container.config
 
         return {"message": "Logged in", "api_key": config.API_KEY()}
-
-    @api.post(
-        "/logout",
-    )
-    @api.doc(
-        description="Logout",
-        operation_id="logout",
-        responses={
-            200: {"description": "Logged out"},
-            401: {"description": "Unauthorized"},
-        },
-        summary="Logout",
-        tags=["Auth"],
-    )
-    def logout():
-        return {"message": "Logged out"}
-
-    @api.get(
-        "/protected",
-    )
-    @api.doc(
-        description="Protected",
-        operation_id="protected",
-        responses={
-            200: {"description": "Protected"},
-            401: {"description": "Unauthorized"},
-        },
-        security="ApiKeyAuth",
-        summary="Protected",
-        tags=["Auth"],
-    )
-    @auth.login_required
-    def protected():
-        return {"message": "Protected"}
