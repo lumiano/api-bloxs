@@ -1,17 +1,20 @@
+import dataclasses
 from contextlib import AbstractContextManager, contextmanager
-from typing import Any
 
 from sqlalchemy import create_engine, orm
-
 from sqlalchemy.orm import Session
 
+from api_bloxs.base.database import Database
+from api_bloxs.infra.trace import Trace
 
-from api_bloxs.base.model import Base
 
+@dataclasses.dataclass
+class MySQLDatabase(Database):
+    """MySQL Database"""
 
-class MySQLDatabase:
-    def __init__(self, db_url: str) -> None:
+    def __init__(self, db_url: str, trace: Trace) -> None:
         self.engine = create_engine(db_url)
+        self.trace = trace
 
         self._session = orm.scoped_session(
             orm.sessionmaker(
@@ -21,16 +24,20 @@ class MySQLDatabase:
             ),
         )
 
-    def create_database(self) -> Any:
-        Base.metadata.create_all(self.engine)
-
     @contextmanager
-    def session(self) -> AbstractContextManager[Session]:
+    def session(
+        self,
+    ) -> AbstractContextManager[Session]:
         session = self._session()
         try:
             yield session
-        except Exception:
+            self.trace.logger.info("Commiting session")
+        except Exception as e:
+            self.trace.logger.error("Error on session rollback")
             session.rollback()
+
+            self.trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
             raise
         finally:
+            self.trace.logger.info("Closing session")
             session.close()
