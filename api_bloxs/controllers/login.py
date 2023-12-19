@@ -1,7 +1,7 @@
-from apiflask import APIBlueprint, HTTPTokenAuth
+from apiflask import APIBlueprint
 
-from api_bloxs.middlewares.auth import auth
 from api_bloxs.shared.application import ApplicationContainer
+from api_bloxs.middlewares.auth import auth
 
 login = APIBlueprint("auth", __name__, url_prefix="/auth")
 
