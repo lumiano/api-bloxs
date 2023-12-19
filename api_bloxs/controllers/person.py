@@ -3,14 +3,14 @@ from trace import Trace
 from apiflask import APIBlueprint, HTTPError
 from dependency_injector.wiring import Provide, inject
 
+from api_bloxs.middlewares.auth import auth
 from api_bloxs.modules.person.dto.person import PersonDto
 from api_bloxs.modules.person.errors.errors import PersonAlreadyExists
 from api_bloxs.modules.person.model.person import Person
 from api_bloxs.modules.person.services.person import PersonService
-from api_bloxs.routes.login import auth
 from api_bloxs.shared.application import ApplicationContainer
 
-api = APIBlueprint(
+person = APIBlueprint(
     "person",
     __name__,
     tag="Person",
@@ -19,8 +19,8 @@ api = APIBlueprint(
 
 
 class PersonController:
-    @api.post("/")
-    @api.input(
+    @person.post("/")
+    @person.input(
         schema=PersonDto,
         arg_name="PersonDto",
         examples={
@@ -37,7 +37,7 @@ class PersonController:
             }
         },
     )
-    @api.doc(
+    @person.doc(
         security="ApiKeyAuth",
         description="Create person",
         operation_id="create_person",
@@ -49,7 +49,7 @@ class PersonController:
         summary="Create person",
         tags=["Person"],
     )
-    @api.output(
+    @person.output(
         schema=PersonDto,
         status_code=200,
         content_type="application/json",

@@ -1,17 +1,9 @@
 from apiflask import APIBlueprint, HTTPTokenAuth
 
+from api_bloxs.middlewares.auth import auth
 from api_bloxs.shared.application import ApplicationContainer
 
-api = APIBlueprint("auth", __name__, url_prefix="/auth")
-
-
-auth = HTTPTokenAuth(
-    description="API Key Authentication",
-    scheme="ApiKeyAuth",
-    realm="Access to the API requires an API Key",
-    header="X-API-Key",
-    security_scheme_name="ApiKeyAuth",
-)
+login = APIBlueprint("auth", __name__, url_prefix="/auth")
 
 
 class AuthController:
@@ -25,11 +17,11 @@ class AuthController:
 
         return token == config.API_KEY()
 
-    @api.post(
+    @login.post(
         "/login",
     )
     @auth.login_required
-    @api.doc(
+    @login.doc(
         description="Login",
         operation_id="login",
         responses={

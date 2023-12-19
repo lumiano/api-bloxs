@@ -9,7 +9,7 @@ from api_bloxs.shared.services import ServicesContainer
 class ApplicationContainer(containers.DeclarativeContainer):
     """Application container"""
 
-    wiring_config = containers.WiringConfiguration(packages=["api_bloxs.routes"])
+    wiring_config = containers.WiringConfiguration(packages=["api_bloxs.controllers"])
 
     environment: providers.Provider[Environment] = providers.Singleton(Environment)
 

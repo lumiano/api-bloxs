@@ -6,6 +6,7 @@ from dependency_injector.wiring import Provide, inject
 
 from api_bloxs.infra.errors import InternalServerError
 from api_bloxs.infra.trace import Trace
+from api_bloxs.middlewares.auth import auth
 from api_bloxs.modules.account.dto.account import AccountDto
 from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
 from api_bloxs.modules.account.errors.errors import (
@@ -24,10 +25,9 @@ from api_bloxs.modules.transaction.model.transaction import Transaction
 from api_bloxs.modules.transaction.services.transaction import \
     TransactionService
 from api_bloxs.modules.withdraw.dto.withdraw import WithdrawDto
-from api_bloxs.routes.login import auth
 from api_bloxs.shared.application import ApplicationContainer
 
-api = APIBlueprint(
+account = APIBlueprint(
     "account",
     __name__,
     tag="Account",
@@ -36,10 +36,10 @@ api = APIBlueprint(
 
 
 class AccountController:
-    @api.get(
+    @account.get(
         "/<int:account_id>",
     )
-    @api.doc(
+    @account.doc(
         description="Get account by id",
         operation_id="get_account_by_id",
         responses={
@@ -51,7 +51,7 @@ class AccountController:
         tags=["Account"],
         security="ApiKeyAuth",
     )
-    @api.output(
+    @account.output(
         description="Account found",
         schema_name="Account",
         schema=AccountDto,
@@ -94,8 +94,8 @@ class AccountController:
 
             raise InternalServerError()
 
-    @api.post("/")
-    @api.input(
+    @account.post("/")
+    @account.input(
         schema=AccountDto,
         example={
             "id": 1,
@@ -110,7 +110,7 @@ class AccountController:
         arg_name="AccountDto",
         schema_name="AccountDto",
     )
-    @api.doc(
+    @account.doc(
         description="Create account",
         operation_id="create_account",
         responses={
@@ -127,7 +127,7 @@ class AccountController:
         tags=["Account"],
         security="ApiKeyAuth",
     )
-    @api.output(
+    @account.output(
         description="Account created",
         schema_name="Account",
         schema=AccountDto,
@@ -192,8 +192,8 @@ class AccountController:
 
             raise InternalServerError()
 
-    @api.post("/<int:account_id>/deposit")
-    @api.doc(
+    @account.post("/<int:account_id>/deposit")
+    @account.doc(
         security="ApiKeyAuth",
         description="Deposit",
         operation_id="deposit",
@@ -206,7 +206,7 @@ class AccountController:
         summary="Deposit",
         tags=["Account"],
     )
-    @api.input(
+    @account.input(
         schema_name="DepositDto",
         schema=DepositDto,
         example={
@@ -222,7 +222,7 @@ class AccountController:
         },
         arg_name="deposit_dto",
     )
-    @api.output(
+    @account.output(
         example={
             "balance": 1000.0,
         },
@@ -283,8 +283,8 @@ class AccountController:
             trace.logger.error(e)
             raise e
 
-    @api.post("/<int:account_id>/withdraw")
-    @api.doc(
+    @account.post("/<int:account_id>/withdraw")
+    @account.doc(
         description="Withdraw",
         operation_id="withdraw",
         responses={
@@ -297,7 +297,7 @@ class AccountController:
         tags=["Account"],
         security="ApiKeyAuth",
     )
-    @api.input(
+    @account.input(
         schema_name="WithdrawDto",
         schema=WithdrawDto,
         example={
@@ -313,7 +313,7 @@ class AccountController:
         },
         arg_name="WithdrawDto",
     )
-    @api.output(
+    @account.output(
         example={
             "balance": 1000.0,
         },
@@ -393,8 +393,8 @@ class AccountController:
             trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
             raise e
 
-    @api.post("/<int:account_id>/freezed")
-    @api.doc(
+    @account.post("/<int:account_id>/freezed")
+    @account.doc(
         description="Account freezed",
         operation_id="freezed",
         responses={
@@ -407,7 +407,7 @@ class AccountController:
         tags=["Account"],
         security="ApiKeyAuth",
     )
-    @api.output(
+    @account.output(
         examples={
             "AccountDto": {
                 "value": {
@@ -461,8 +461,8 @@ class AccountController:
             trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
             raise e
 
-    @api.get("/<int:account_id>/transaction")
-    @api.doc(
+    @account.get("/<int:account_id>/transaction")
+    @account.doc(
         description="Get transactions by account id",
         operation_id="transactions",
         responses={
@@ -475,7 +475,7 @@ class AccountController:
         tags=["Account"],
         security="ApiKeyAuth",
     )
-    @api.input(
+    @account.input(
         location="query",
         arg_name="TransactionQueryDto",
         schema_name="TransactionQueryDto",
@@ -487,7 +487,7 @@ class AccountController:
             "sort": "desc",
         },
     )
-    @api.output(
+    @account.output(
         description="Transactions",
         schema_name="TransactionsPagination",
         schema=TransactionsPagination,
