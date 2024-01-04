@@ -11,9 +11,9 @@ class AccountService(Service):
     def __init__(self, account_repository: AccountRepository):
         self.account_repository = account_repository
 
-    def get_all(self) -> List[Account]:
+    def get_all(self, query) -> List[Account]:
         """Get all accounts."""
-        return self.account_repository.get_all()
+        return self.account_repository.get_all(query)
 
     def get_by_id(self, account_id: int) -> Account:
         """Get account by id."""

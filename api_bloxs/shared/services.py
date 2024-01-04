@@ -1,6 +1,5 @@
 from dependency_injector import containers, providers
 
-from api_bloxs.base.service import Service
 from api_bloxs.modules.account.services.account import AccountService
 from api_bloxs.modules.person.services.person import PersonService
 from api_bloxs.modules.transaction.services.transaction import \

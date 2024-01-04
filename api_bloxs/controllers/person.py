@@ -26,7 +26,6 @@ class PersonController:
         examples={
             "PersonDto": {
                 "value": {
-                    "id": 1,
                     "creation_date": "2021-01-01T00:00:00",
                     "update_date": "2021-01-01T00:00:00",
                     "name": "John Doe",

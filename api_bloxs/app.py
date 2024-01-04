@@ -1,4 +1,5 @@
 from apiflask import APIFlask
+from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
@@ -22,6 +23,12 @@ class App:
             json_errors=False,
         )
 
+        """CORS configuration"""
+        cors = CORS()
+
+        cors.init_app(app=app, supports_credentials=True)
+
+        """Application container"""
         application_container = ApplicationContainer()
 
         config = application_container.config
@@ -50,7 +57,7 @@ class App:
             metadata=Base.metadata,
         )
 
-        migrate = Migrate(app, database)
+        _ = Migrate(app, database)
 
         """Blueprints"""
         [app.register_blueprint(blueprint) for blueprint in [account, person, login]]

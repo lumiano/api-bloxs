@@ -8,10 +8,14 @@ from api_bloxs.infra.errors import InternalServerError
 from api_bloxs.infra.trace import Trace
 from api_bloxs.middlewares.auth import auth
 from api_bloxs.modules.account.dto.account import AccountDto
+from api_bloxs.modules.account.dto.query import AccountQueryDto
 from api_bloxs.modules.account.enum.account_type import AccountTypeEnum
 from api_bloxs.modules.account.errors.errors import (
     AccountBalanceError, AccountDailyWithdrawalLimitError, AccountDeactivated,
     AccountNotFound, AccountTypePerson)
+from api_bloxs.modules.account.mappers.account_person import \
+    AccountPersonMapper
+from api_bloxs.modules.account.mappers.pagination import AccountPagination
 from api_bloxs.modules.account.model.account import Account
 from api_bloxs.modules.account.services.account import AccountService
 from api_bloxs.modules.deposit.model.deposit import DepositDto
@@ -36,6 +40,102 @@ account = APIBlueprint(
 
 
 class AccountController:
+    @account.get("/")
+    @account.doc(
+        security="ApiKeyAuth",
+        description="Get all accounts",
+        operation_id="get_all_accounts",
+        responses={
+            200: {"description": "Accounts found"},
+            500: {"description": "Internal server error"},
+        },
+        summary="Get all accounts",
+        tags=["Account"],
+    )
+    @account.input(
+        location="query",
+        arg_name="AccountQueryDto",
+        schema_name="AccountQueryDto",
+        schema=AccountQueryDto,
+        example={
+            "page": 1,
+            "offset": 10,
+            "order_by": "id",
+            "sort": "desc",
+            "id": 1,
+            "document": "12345678900",
+            "account_type": "CURRENT_ACCOUNT",
+        },
+    )
+    @account.output(
+        description="Accounts found",
+        schema_name="AccountsPagination",
+        schema=AccountPagination,
+        example={
+            "items": [
+                {
+                    "id": 1,
+                    "person_id": 1,
+                    "balance": 1000.0,
+                    "daily_withdrawal_limit": 1000.0,
+                    "account_type": "CURRENT_ACCOUNT",
+                    "is_active": True,
+                    "creation_date": "2021-08-01T00:00:00",
+                    "update_date": "2021-08-01T00:00:00",
+                    "person": {
+                        "id": 1,
+                        "name": "John Doe",
+                        "document": "12345678900",
+                        "is_active": True,
+                        "creation_date": "2021-08-01T00:00:00",
+                        "update_date": "2021-08-01T00:00:00",
+                        "birthday": "1990-01-01T00:00:00",
+                    },
+                }
+            ],
+            "pagination": {
+                "page": 1,
+                "offset": 10,
+                "total": 1,
+            },
+        },
+    )
+    @auth.login_required
+    @inject
+    def get_all(
+        AccountQueryDto: AccountQueryDto,
+        account_service: AccountService = Provide[
+            ApplicationContainer.services.account
+        ],
+        trace: Trace = Provide[ApplicationContainer.infra.trace],
+    ) -> TransactionsPagination:
+        try:
+            q = {k: v for k, v in AccountQueryDto.items() if v is not None}
+
+            accounts = account_service.get_all(q)
+
+            return {
+                "items": accounts,
+                "pagination": {
+                    "page": q["page"],
+                    "per_page": q["offset"],
+                    "total": len(accounts),
+                },
+            }
+
+        except HTTPError as e:
+            print(e)
+            trace.logger.error(
+                f"[{e.status_code} - {e.__class__.__name__}] - {e.message} {e.detail} - {e.__traceback__}"
+            )
+
+            raise e
+
+        except Exception as e:
+            trace.logger.error(f"[{e.__class__.__name__}] - {e.__traceback__}")
+
+            raise InternalServerError()
+
     @account.get(
         "/<int:account_id>",
     )
@@ -98,7 +198,6 @@ class AccountController:
     @account.input(
         schema=AccountDto,
         example={
-            "id": 1,
             "person_id": 1,
             "balance": 1000.0,
             "daily_withdrawal_limit": 1000.0,
@@ -129,8 +228,14 @@ class AccountController:
     )
     @account.output(
         description="Account created",
-        schema_name="Account",
-        schema=AccountDto,
+        schema_name="AccountPersonMapper",
+        schema=AccountPersonMapper,
+        links={
+            "self": {
+                "operationId": "create_account",
+                "parameters": {"account_id": "$response.body#/id"},
+            },
+        },
         example={
             "id": 1,
             "person_id": 1,
@@ -140,8 +245,16 @@ class AccountController:
             "is_active": True,
             "creation_date": "2021-08-01T00:00:00",
             "update_date": "2021-08-01T00:00:00",
+            "person": {
+                "id": 1,
+                "name": "John Doe",
+                "document": "12345678900",
+                "is_active": True,
+                "creation_date": "2021-08-01T00:00:00",
+                "update_date": "2021-08-01T00:00:00",
+                "birthday": "1990-01-01T00:00:00",
+            },
         },
-        status_code=201,
     )
     @auth.login_required
     @inject
@@ -162,8 +275,6 @@ class AccountController:
             if account.account_type not in AccountTypeEnum:
                 raise AccountTypePerson()
 
-            person = person_service.get_by_id(account.person_id)
-
             account_type_person = account_service.get_by_type_and_person_id(
                 account.account_type, account.person_id
             )
@@ -171,13 +282,35 @@ class AccountController:
             if account_type_person is not None:
                 raise AccountTypePerson()
 
+            person = person_service.get_by_id(account.person_id)
+
             if person is None:
                 raise PersonNotFoundError()
 
             if person.is_active is False:
                 raise PersonNotActive()
 
-            return account_service.create(account)
+            account = account_service.create(account)
+
+            return {
+                "id": account.id,
+                "person_id": account.person_id,
+                "balance": account.balance,
+                "daily_withdrawal_limit": account.daily_withdrawal_limit,
+                "account_type": account.account_type,
+                "is_active": account.is_active,
+                "creation_date": account.creation_date,
+                "update_date": account.update_date,
+                "person": {
+                    "id": person.id,
+                    "name": person.name,
+                    "document": person.document,
+                    "is_active": person.is_active,
+                    "creation_date": person.creation_date,
+                    "update_date": person.update_date,
+                    "birthday": person.birthday,
+                },
+            }
 
         except HTTPError as e:
             trace.logger.error(
@@ -492,7 +625,7 @@ class AccountController:
         schema_name="TransactionsPagination",
         schema=TransactionsPagination,
         example={
-            "data": [
+            "items": [
                 {
                     "id": 1,
                     "account_id": 1,
@@ -542,7 +675,7 @@ class AccountController:
             )
 
             return {
-                "data": transactions,
+                "items": transactions,
                 "pagination": {
                     "page": TransactionQueryDto["page"],
                     "per_page": TransactionQueryDto["offset"],

@@ -1,16 +1,17 @@
-from apiflask import Schema, fields
+from apiflask import Schema
+from apiflask.fields import Boolean, Date, DateTime, Integer, String
 from apiflask.validators import Length
 
 
 class PersonDto(Schema):
     """Person DTO"""
 
-    id = fields.Integer(
+    id = Integer(
         required=False,
         description="Person ID",
         example=1,
     )
-    name = fields.String(
+    name = String(
         required=True,
         description="Name",
         example="John Doe",
@@ -19,25 +20,25 @@ class PersonDto(Schema):
         ],
     )
 
-    document = fields.String(
+    document = String(
         required=True,
         description="Document",
         example="12345678901",
         validate=[Length(min=11, max=14)],
     )
 
-    birthday = fields.Date(
+    birthday = Date(
         required=True,
         description="Birthday",
         example="1990-01-01:00:00:00",
         format="%Y-%m-%dT%H:%M:%S",
     )
 
-    is_active = fields.Boolean(
+    is_active = Boolean(
         required=False,
         description="Is active",
         example=True,
     )
 
-    creation_date = fields.DateTime(format="%Y-%m-%dT%H:%M:%S", required=False)
-    update_date = fields.DateTime(format="%Y-%m-%dT%H:%M:%S", required=False)
+    creation_date = DateTime(format="%Y-%m-%dT%H:%M:%S", required=False)
+    update_date = DateTime(format="%Y-%m-%dT%H:%M:%S", required=False)

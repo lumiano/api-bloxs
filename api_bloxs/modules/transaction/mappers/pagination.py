@@ -14,6 +14,6 @@ class TransactionsPagination(Schema):
 class TransactionsPagination(Schema):
     """Transactions pagination schema."""
 
-    data = List(Nested(TransactionsPagination))
+    items = List(Nested(TransactionsPagination))
 
     pagination = Nested(PaginationSchema)
